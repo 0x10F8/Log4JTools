@@ -18,7 +18,7 @@ PATCHED_STRING="log4j2"
 echo "[+] Starting scan for vulnerable log4j2.."
  
 # Find log4j2 /war/ear/jar and class files
-find / -type f -regex ".*\.\([wej]ar\|class\)" -exec bash -c '
+find $START_DIR -type f -regex ".*\.\([wej]ar\|class\)" -exec bash -c '
 list_archive_and_file_if_jar(){
         file="$1"
         if [[ "$file" == *"ar" ]]; then
@@ -36,7 +36,7 @@ list_archive_and_file_if_jar "$@"' bash {} \; 2>/dev/null | egrep -i ".*log4j.*c
 # Seperate jars and classes
 cat $LOG4J2FILES_TMP_FILE | grep "$FILE_DELIM" | awk -F "${FILE_DELIM}" '{print $1}' | sort | uniq > $LOG4J2JARS_TMP_FILE
 cat $LOG4J2FILES_TMP_FILE | grep -v "$FILE_DELIM" > $LOG4J2CLASSES_TMP_FILE
- 
+
 # Check jars for vulnerable code
 while read jar_file; do
     is_patched=$(unzip -p $jar_file $JNDI_MANAGER_CLASS 2>&1 | grep "$PATCHED_STRING")
@@ -44,14 +44,13 @@ while read jar_file; do
         echo "[!] Vulnerable jar found: ${jar_file}"
     fi
 done <$LOG4J2JARS_TMP_FILE
- 
+
 # Find root dirs for unpackaged classes   
 while read class_file; do
-    echo "$class_file"
     echo "$class_file" | awk -F "org" '{print $1}' >> $LOG4J2CLASSES_ROOTS_TMP_FILE
 done <$LOG4J2CLASSES_TMP_FILE
 cat $LOG4J2CLASSES_ROOTS_TMP_FILE 2>/dev/null | sort | uniq > $LOG4J2CLASSES_ROOTS_TMP_FILE
- 
+
 # Detect vulnerable versions of unpacked classes
 while read class_root; do
     jndi_manager="$class_root/$JNDI_MANAGER_CLASS"
